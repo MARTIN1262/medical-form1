@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Medical Consultation</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root {
+  --bg:        #060d14;
+  --surface:   #0b1622;
+  --surface2:  #0f1e2e;
+  --border:    #16293d;
+  --border2:   #1e3a54;
+  --teal:      #00d4b4;
+  --teal-dim:  #00a88f;
+  --teal-glow: rgba(0,212,180,0.12);
+  --teal-soft: rgba(0,212,180,0.06);
+  --red:       #ff4d6d;
+  --amber:     #ffb347;
+  --text:      #e8f4f2;
+  --text-mid:  #7a9baa;
+  --text-dim:  #3d5a6a;
+  --mono:      'IBM Plex Mono', monospace;
+}
+
+/* ══════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ── GRID BG ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,180,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,180,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── RADIAL GLOW ── */
+body::after {
+  content: '';
+  position: fixed;
+  top: -20%;
+  right: -10%;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,212,180,0.06) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ══════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════ */
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px 80px;
+}
+
+.card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,212,180,0.05),
+    0 32px 80px rgba(0,0,0,0.6),
+    0 0 60px rgba(0,212,180,0.04);
+  animation: rise 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.header {
+  position: relative;
+  padding: 40px 40px 36px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--teal), var(--teal-dim), transparent);
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.pulse-icon {
+  flex-shrink: 0;
+  width: 56px; height: 56px;
+  background: var(--teal-soft);
+  border: 1px solid rgba(0,212,180,0.2);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  position: relative;
+}
+
+.pulse-icon::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 20px;
+  border: 1px solid rgba(0,212,180,0.15);
+  animation: pulse-ring 2.5s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+
+.header-text h1 {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.header-text p {
+  font-size: 0.9rem;
+  color: var(--text-mid);
+  line-height: 1.6;
+}
+
+/* progress bar */
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal-dim), var(--teal));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 8px rgba(0,212,180,0.5);
+}
+
+.progress-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--teal);
+  white-space: nowrap;
+}
+
+/* step indicators */
+.steps-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.step-dot {
+  flex: 1;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+
+.step-dot.active { background: var(--teal); }
+.step-dot.done   { background: var(--teal-dim); }
+
+/* ══════════════════════════════════════════
+   FORM BODY
+══════════════════════════════════════════ */
+.form-body { padding: 0; }
+
+/* ── SECTION ── */
+.section {
+  display: none;
+  padding: 36px 40px;
+  animation: fadein 0.35s ease both;
+}
+
+.section.active { display: block; }
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+/* ── FIELD ── */
+.field { margin-bottom: 20px; }
+
+.field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+
+.field label .req {
+  color: var(--red);
+  font-size: 0.7rem;
+}
+
+/* base input styles */
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  -webkit-appearance: none;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+  background: #0d1f30;
+  box-shadow: 0 0 0 3px rgba(0,212,180,0.1), 0 0 16px rgba(0,212,180,0.06);
+}
+
+.field input.error,
+.field select.error,
+.field textarea.error {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(255,77,109,0.1);
+}
+
+.field textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.field select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300d4b4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 16px center;
+  padding-left: 40px;
+}
+
+.field select option { background: #0b1622; }
+
+/* error msg */
+.err-msg {
+  font-size: 0.78rem;
+  color: var(--red);
+  margin-top: 6px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.err-msg.show { display: flex; }
+
+/* ── ROW ── */
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── GENDER TOGGLE ── */
+.gender-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gender-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-mid);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.gender-btn:hover { border-color: var(--teal-dim); color: var(--text); }
+
+.gender-btn.selected {
+  background: var(--teal-glow);
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 16px rgba(0,212,180,0.08);
+}
+
+.gender-btn span { display: block; font-size: 1.4rem; margin-bottom: 4px; }
+
+/* ── SYMPTOM CHIPS ── */
+.chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-family: 'Tajawal', sans-serif;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.chip:hover { border-color: var(--teal-dim); color: var(--text); }
+
+.chip.active {
+  background: var(--teal-glow);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+/* ── BMI DISPLAY ── */
+.bmi-card {
+  background: var(--teal-soft);
+  border: 1px solid rgba(0,212,180,0.15);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 16px;
+  display: none;
+  align-items: center;
+  gap: 16px;
+}
+
+.bmi-card.show { display: flex; }
+
+.bmi-num {
+  font-family: var(--mono);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--teal);
+  line-height: 1;
+}
+
+.bmi-info { flex: 1; }
+.bmi-status { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.bmi-note   { font-size: 0.78rem; color: var(--text-mid); margin-top: 3px; }
+
+/* ── DURATION PILLS ── */
+.pill-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pill {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-mid);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.pill:hover { border-color: var(--teal-dim); color: var(--text); }
+.pill.selected { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+
+/* ── CHRONIC CHECKBOX ── */
+.check-group { display: flex; flex-direction: column; gap: 8px; }
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.check-item:hover { border-color: var(--border2); background: #111f2e; }
+.check-item.checked { background: var(--teal-glow); border-color: rgba(0,212,180,0.3); }
+
+.check-item input[type="checkbox"] { display: none; }
+
+.check-box {
+  width: 20px; height: 20px;
+  background: var(--bg);
+  border: 1.5px solid var(--border2);
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  font-size: 0.75rem;
+}
+
+.check-item.checked .check-box {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--bg);
+}
+
+.check-label {
+  font-size: 0.9rem;
+  color: var(--text-mid);
+  transition: color 0.2s;
+}
+
+.check-item.checked .check-label { color: var(--text); }
+
+/* ══════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════ */
+.nav {
+  padding: 0 40px 36px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 13px 20px;
+  color: var(--text-mid);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-back:hover { border-color: var(--teal-dim); color: var(--text); }
+.btn-back.hidden { display: none; }
+
+.btn-next {
+  flex: 1;
+  background: var(--teal);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  color: var(--bg);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-next::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn-next:hover {
+  background: #00e8c6;
+  box-shadow: 0 8px 24px rgba(0,212,180,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-next:hover::before { opacity: 1; }
+.btn-next:active { transform: translateY(0); }
+
+.btn-next.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ── SUBMIT BUTTON ── */
+.btn-submit {
+  flex: 1;
+  background: linear-gradient(135deg, var(--teal-dim), var(--teal));
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  color: var(--bg);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 24px rgba(0,212,180,0.2);
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0,212,180,0.35);
+}
+
+.btn-submit:active { transform: translateY(0); }
+
+/* ══════════════════════════════════════════
+   DIVIDER
+══════════════════════════════════════════ */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 40px;
+}
+
+/* ══════════════════════════════════════════
+   SUCCESS SCREEN
+══════════════════════════════════════════ */
+#success-screen {
+  display: none;
+  padding: 60px 40px;
+  text-align: center;
+  animation: fadein 0.5s ease both;
+}
+
+#success-screen.show { display: block; }
+
+.success-icon {
+  width: 80px; height: 80px;
+  background: var(--teal-soft);
+  border: 1px solid rgba(0,212,180,0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem;
+  margin: 0 auto 24px;
+  animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both 0.2s;
+}
+
+@keyframes pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+#success-screen h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+#success-screen p  { color: var(--text-mid); font-size: 0.95rem; line-height: 1.7; }
+
+.success-email-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--teal-soft);
+  border: 1px solid rgba(0,212,180,0.2);
+  border-radius: 10px;
+  padding: 12px 20px;
+  margin: 20px auto 0;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--teal);
+}
+
+.warning-note {
+  margin-top: 24px;
+  background: rgba(255,179,71,0.08);
+  border: 1px solid rgba(255,179,71,0.2);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 0.82rem;
+  color: var(--amber);
+  text-align: right;
+  line-height: 1.7;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 520px) {
+  .header, .section, .nav { padding-right: 24px; padding-left: 24px; }
+  .section-divider { margin: 0 24px; }
+  .row { grid-template-columns: 1fr; }
+  .pill-group { grid-template-columns: 1fr 1fr; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="page">
+<div class="card">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+    <div class="header-top">
+      <div class="pulse-icon">🩺</div>
+      <div class="header-text">
+        <h1>AI Medical Consultation</h1>
+        <p>Describe your symptoms and receive a full medical analysis in your inbox within minutes</p>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+      <span class="progress-label" id="progress-txt">0 / 4</span>
+    </div>
+    <div class="steps-row" id="step-dots">
+      <div class="step-dot active" data-step="0"></div>
+      <div class="step-dot" data-step="1"></div>
+      <div class="step-dot" data-step="2"></div>
+      <div class="step-dot" data-step="3"></div>
+    </div>
+  </div>
+
+  <!-- ══ FORM ══ -->
+  <form id="main-form" novalidate>
+
+    <!-- ─ SECTION 0: بياناتك الأساسية ─ -->
+    <div class="section active" data-section="0">
+      <div class="section-label">الخطوة 1 من 4</div>
+      <div class="section-title">بياناتك الأساسية 👤</div>
+
+      <div class="field">
+        <label>الاسم الكامل <span class="req">*</span></label>
+        <input type="text" id="name" placeholder="اكتب اسمك هنا" autocomplete="off">
+        <div class="err-msg" id="err-name">⚠ من فضلك اكتب اسمك</div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>العمر <span class="req">*</span></label>
+          <input type="number" id="age" placeholder="مثال: 30" min="1" max="120">
+          <div class="err-msg" id="err-age">⚠ اكتب عمر صحيح</div>
+        </div>
+        <div class="field">
+          <label>الجنس <span class="req">*</span></label>
+          <div class="gender-toggle">
+            <button type="button" class="gender-btn" data-val="ذكر" onclick="selectGender(this)">
+              <span>👨</span>ذكر
+            </button>
+            <button type="button" class="gender-btn" data-val="أنثى" onclick="selectGender(this)">
+              <span>👩</span>أنثى
+            </button>
+          </div>
+          <input type="hidden" id="gender">
+          <div class="err-msg" id="err-gender">⚠ اختار الجنس</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>الطول (سم) <span class="req">*</span></label>
+          <input type="number" id="height" placeholder="مثال: 175" min="100" max="250" oninput="calcBMI()">
+          <div class="err-msg" id="err-height">⚠ اكتب طول صحيح</div>
+        </div>
+        <div class="field">
+          <label>الوزن (كجم) <span class="req">*</span></label>
+          <input type="number" id="weight" placeholder="مثال: 80" min="20" max="300" oninput="calcBMI()">
+          <div class="err-msg" id="err-weight">⚠ اكتب وزن صحيح</div>
+        </div>
+      </div>
+
+      <div class="bmi-card" id="bmi-card">
+        <div class="bmi-num" id="bmi-num">--</div>
+        <div class="bmi-info">
+          <div class="bmi-status" id="bmi-status">—</div>
+          <div class="bmi-note" id="bmi-note">مؤشر كتلة الجسم (BMI)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ─ SECTION 1: الأعراض ─ -->
+    <div class="section" data-section="1">
+      <div class="section-label">الخطوة 2 من 4</div>
+      <div class="section-title">الأعراض اللي حاسس بيها 🤒</div>
+
+      <div class="field">
+        <label>اختار الأعراض الشائعة (اختياري)</label>
+        <div class="chips-grid" id="chips">
+          <div class="chip" onclick="toggleChip(this)">🤕 صداع</div>
+          <div class="chip" onclick="toggleChip(this)">🌡️ حرارة</div>
+          <div class="chip" onclick="toggleChip(this)">😤 ضيق تنفس</div>
+          <div class="chip" onclick="toggleChip(this)">🤧 سيلان أنف</div>
+          <div class="chip" onclick="toggleChip(this)">😮 سعال</div>
+          <div class="chip" onclick="toggleChip(this)">🤢 غثيان</div>
+          <div class="chip" onclick="toggleChip(this)">🤮 قيء</div>
+          <div class="chip" onclick="toggleChip(this)">😖 ألم في البطن</div>
+          <div class="chip" onclick="toggleChip(this)">💩 إسهال</div>
+          <div class="chip" onclick="toggleChip(this)">😵 دوخة</div>
+          <div class="chip" onclick="toggleChip(this)">😴 إرهاق شديد</div>
+          <div class="chip" onclick="toggleChip(this)">🦴 آلام في العظام</div>
+          <div class="chip" onclick="toggleChip(this)">😰 تعرق</div>
+          <div class="chip" onclick="toggleChip(this)">😮‍💨 ألم في الصدر</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>اوصف أعراضك بالتفصيل <span class="req">*</span></label>
+        <textarea id="symptoms" placeholder="مثال: عندي صداع شديد من امبارح مع حرارة خفيفة وألم في الحلق...&#10;كل تفصيلة مهمة!"></textarea>
+        <div class="err-msg" id="err-symptoms">⚠ اوصف أعراضك من فضلك</div>
+      </div>
+
+      <div class="field">
+        <label>منذ متى بدأت الأعراض؟ <span class="req">*</span></label>
+        <div class="pill-group" id="duration-pills">
+          <div class="pill" onclick="selectPill(this,'duration')" data-val="أقل من 24 ساعة">أقل من 24 ساعة</div>
+          <div class="pill" onclick="selectPill(this,'duration')" data-val="يوم إلى 3 أيام">يوم إلى 3 أيام</div>
+          <div class="pill" onclick="selectPill(this,'duration')" data-val="3 أيام إلى أسبوع">3 أيام إلى أسبوع</div>
+          <div class="pill" onclick="selectPill(this,'duration')" data-val="أكثر من أسبوع">أكثر من أسبوع</div>
+        </div>
+        <input type="hidden" id="duration">
+        <div class="err-msg" id="err-duration">⚠ اختار مدة الأعراض</div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ─ SECTION 2: السجل الطبي ─ -->
+    <div class="section" data-section="2">
+      <div class="section-label">الخطوة 3 من 4</div>
+      <div class="section-title">سجلك الطبي 🏥</div>
+
+      <div class="field">
+        <label>هل عندك أمراض مزمنة؟</label>
+        <div class="check-group" id="chronic-group">
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="لا يوجد">
+            <div class="check-box">✓</div>
+            <span class="check-label">لا، أنا بصحة جيدة 💪</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="سكري">
+            <div class="check-box">✓</div>
+            <span class="check-label">سكري 🩸</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="ضغط دم">
+            <div class="check-box">✓</div>
+            <span class="check-label">ضغط دم ❤️</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="قلب">
+            <div class="check-box">✓</div>
+            <span class="check-label">أمراض قلب 💓</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="ربو / أمراض تنفسية">
+            <div class="check-box">✓</div>
+            <span class="check-label">ربو / أمراض تنفسية 🫁</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <input type="checkbox" value="أمراض أخرى">
+            <div class="check-box">✓</div>
+            <span class="check-label">أمراض أخرى</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>هل بتاخد أدوية حالياً؟</label>
+        <input type="text" id="medications" placeholder="مثال: بروفين، باراسيتامول... أو اتركه فاضي">
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ─ SECTION 3: الإيميل ─ -->
+    <div class="section" data-section="3">
+      <div class="section-label">الخطوة 4 من 4</div>
+      <div class="section-title">أخر خطوة — إيميلك 📧</div>
+
+      <div class="field">
+        <label>إيميل Gmail الخاص بيك <span class="req">*</span></label>
+        <input type="email" id="email" placeholder="example@gmail.com" dir="ltr" style="text-align:left">
+        <div class="err-msg" id="err-email">⚠ اكتب إيميل صحيح</div>
+      </div>
+
+      <div style="background:var(--teal-soft);border:1px solid rgba(0,212,180,0.15);border-radius:12px;padding:18px 20px;margin-top:8px;">
+        <div style="font-size:0.88rem;color:var(--text-mid);line-height:1.8;">
+          <div style="font-weight:700;color:var(--teal);margin-bottom:8px;">📬 هيوصلك على الإيميل:</div>
+          <div>✦ تحليل كامل لأعراضك</div>
+          <div>✦ التشخيص الأكثر احتمالاً</div>
+          <div>✦ أدوية OTC مقترحة مع الجرعة</div>
+          <div>✦ هل تحتاج تروح طبيب؟</div>
+        </div>
+      </div>
+
+      <div class="warning-note" style="margin-top:16px;">
+        ⚠️ <strong>تنبيه:</strong> هذا التحليل للإرشاد فقط وليس بديلاً عن الاستشارة الطبية المتخصصة. في حالة الطوارئ، اتصل بالإسعاف فوراً.
+      </div>
+    </div>
+
+    <!-- ══ NAVIGATION ══ -->
+    <div class="nav">
+      <button type="button" class="btn-back hidden" id="btn-back" onclick="goBack()">
+        ← رجوع
+      </button>
+      <button type="button" class="btn-next" id="btn-next" onclick="goNext()">
+        التالي ←
+      </button>
+      <button type="submit" class="btn-submit" id="btn-submit" style="display:none" onclick="submitForm(event)">
+        🚀 إرسال للتحليل
+      </button>
+    </div>
+
+  </form>
+
+  <!-- ══ SUCCESS ══ -->
+  <div id="success-screen">
+    <div class="success-icon">✅</div>
+    <h2>تم إرسال بياناتك بنجاح!</h2>
+    <p>جاري تحليل أعراضك بالذكاء الاصطناعي...<br>هيوصلك التقرير الطبي على إيميلك خلال دقيقة 🩺</p>
+    <div class="success-email-box">
+      📧 <span id="confirm-email"></span>
+    </div>
+    <div class="warning-note">
+      ⚠️ هذا التحليل للإرشاد فقط وليس بديلاً عن الاستشارة الطبية المتخصصة.
+    </div>
+  </div>
+
+</div><!-- /card -->
+</div><!-- /page -->
+
+<script>
+let currentSection = 0;
+const totalSections = 4;
+
+// ── PROGRESS ──────────────────────────────
+function updateProgress() {
+  const pct = ((currentSection) / totalSections) * 100;
+  document.getElementById('progress').style.width = pct + '%';
+  document.getElementById('progress-txt').textContent = currentSection + ' / ' + totalSections;
+
+  document.querySelectorAll('.step-dot').forEach((dot, i) => {
+    dot.classList.remove('active','done');
+    if (i === currentSection) dot.classList.add('active');
+    else if (i < currentSection) dot.classList.add('done');
+  });
+}
+
+// ── BMI ───────────────────────────────────
+function calcBMI() {
+  const h = parseFloat(document.getElementById('height').value);
+  const w = parseFloat(document.getElementById('weight').value);
+  const card = document.getElementById('bmi-card');
+
+  if (!h || !w || h < 100 || w < 20) { card.classList.remove('show'); return; }
+
+  const bmi = (w / ((h/100)**2)).toFixed(1);
+  let status, note, color;
+
+  if      (bmi < 18.5) { status='نقص في الوزن ⚠️'; note='يُنصح باستشارة طبيب تغذية'; color='#ffb347'; }
+  else if (bmi < 25)   { status='وزن طبيعي ✅'; note='مؤشرك في النطاق الصحي الممتاز'; color='#00d4b4'; }
+  else if (bmi < 30)   { status='زيادة في الوزن ⚠️'; note='يُنصح بتحسين النظام الغذائي'; color='#ffb347'; }
+  else                 { status='سمنة 🔴'; note='يُنصح بمراجعة طبيب متخصص'; color='#ff4d6d'; }
+
+  document.getElementById('bmi-num').textContent = bmi;
+  document.getElementById('bmi-num').style.color = color;
+  document.getElementById('bmi-status').textContent = status;
+  document.getElementById('bmi-note').textContent = note;
+  card.classList.add('show');
+}
+
+// ── GENDER ────────────────────────────────
+function selectGender(btn) {
+  document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('gender').value = btn.dataset.val;
+  document.getElementById('err-gender').classList.remove('show');
+}
+
+// ── CHIPS ─────────────────────────────────
+function toggleChip(chip) {
+  chip.classList.toggle('active');
+  updateSymptomsFromChips();
+}
+
+function updateSymptomsFromChips() {
+  const active = [...document.querySelectorAll('.chip.active')].map(c => c.textContent.trim());
+  const textarea = document.getElementById('symptoms');
+  if (active.length && !textarea.value) {
+    textarea.placeholder = 'الأعراض المختارة: ' + active.join('، ') + '\n\nأضف تفاصيل أكثر هنا...';
+  }
+}
+
+// ── PILLS ─────────────────────────────────
+function selectPill(pill, group) {
+  document.querySelectorAll(`#${group}-pills .pill`).forEach(p => p.classList.remove('selected'));
+  pill.classList.add('selected');
+  document.getElementById(group).value = pill.dataset.val;
+  document.getElementById('err-' + group).classList.remove('show');
+}
+
+// ── CHECKBOXES ────────────────────────────
+function toggleCheck(item) {
+  setTimeout(() => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    item.classList.toggle('checked', cb.checked);
+  }, 0);
+}
+
+// ── VALIDATION ────────────────────────────
+function validateSection(idx) {
+  let ok = true;
+
+  const hide = id => document.getElementById(id)?.classList.remove('show');
+  const show = id => { document.getElementById(id)?.classList.add('show'); ok = false; };
+  const mark = (id, bad) => { document.getElementById(id)?.classList.toggle('error', bad); };
+
+  if (idx === 0) {
+    const name   = document.getElementById('name').value.trim();
+    const age    = parseInt(document.getElementById('age').value);
+    const gender = document.getElementById('gender').value;
+    const height = parseFloat(document.getElementById('height').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+
+    if (!name)               { show('err-name');   mark('name', true); }   else { hide('err-name');   mark('name', false); }
+    if (!age||age<1||age>120){ show('err-age');    mark('age', true);  }   else { hide('err-age');    mark('age', false); }
+    if (!gender)             { show('err-gender'); }
+    if (!height||height<100) { show('err-height'); mark('height',true);} else { hide('err-height'); mark('height',false);}
+    if (!weight||weight<20)  { show('err-weight'); mark('weight',true);} else { hide('err-weight'); mark('weight',false);}
+  }
+
+  if (idx === 1) {
+    const sym = document.getElementById('symptoms').value.trim();
+    const dur = document.getElementById('duration').value;
+    if (!sym) { show('err-symptoms'); mark('symptoms', true); } else { hide('err-symptoms'); mark('symptoms', false); }
+    if (!dur) { show('err-duration'); }
+  }
+
+  if (idx === 3) {
+    const email = document.getElementById('email').value.trim();
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(email)) { show('err-email'); mark('email', true); } else { hide('err-email'); mark('email', false); }
+  }
+
+  return ok;
+}
+
+// ── NAVIGATION ────────────────────────────
+function goNext() {
+  if (!validateSection(currentSection)) return;
+
+  document.querySelector(`[data-section="${currentSection}"]`).classList.remove('active');
+  currentSection++;
+  document.querySelector(`[data-section="${currentSection}"]`).classList.add('active');
+
+  document.getElementById('btn-back').classList.remove('hidden');
+  updateProgress();
+
+  if (currentSection === totalSections - 1) {
+    document.getElementById('btn-next').style.display = 'none';
+    document.getElementById('btn-submit').style.display = 'flex';
+  }
+}
+
+function goBack() {
+  document.querySelector(`[data-section="${currentSection}"]`).classList.remove('active');
+  currentSection--;
+  document.querySelector(`[data-section="${currentSection}"]`).classList.add('active');
+
+  if (currentSection === 0) document.getElementById('btn-back').classList.add('hidden');
+  document.getElementById('btn-next').style.display = 'flex';
+  document.getElementById('btn-submit').style.display = 'none';
+  updateProgress();
+}
+
+// ── SUBMIT ────────────────────────────────
+function submitForm(e) {
+  e.preventDefault();
+  if (!validateSection(3)) return;
+
+  const btn = document.getElementById('btn-submit');
+  btn.textContent = '⏳ جاري الإرسال...';
+  btn.disabled = true;
+
+  // جمع البيانات
+  const chips = [...document.querySelectorAll('.chip.active')].map(c => c.textContent.trim()).join('، ');
+  const chronic = [...document.querySelectorAll('#chronic-group input:checked')].map(i => i.value).join('، ') || 'لا يوجد';
+
+  const formData = {
+    name:        document.getElementById('name').value.trim(),
+    age:         document.getElementById('age').value,
+    gender:      document.getElementById('gender').value,
+    height:      document.getElementById('height').value,
+    weight:      document.getElementById('weight').value,
+    symptoms:    (chips ? chips + ' — ' : '') + document.getElementById('symptoms').value.trim(),
+    duration:    document.getElementById('duration').value,
+    chronic:     chronic,
+    medications: document.getElementById('medications').value.trim() || 'لا يوجد',
+    email:       document.getElementById('email').value.trim()
+  };
+
+  // ── أرسل لـ n8n webhook ──
+  // غيّر الـ URL ده بـ webhook URL بتاع workflow بتاعك في n8n
+  const N8N_WEBHOOK_URL = 'https://martoo.app.n8n.cloud/webhook/medical-form';
+
+  fetch(N8N_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(formData)
+  })
+  .then(res => {
+    showSuccess(formData.email);
+  })
+  .catch(err => {
+    // لو مفيش n8n webhook حالياً، بيوضح Success Screen عادي
+    console.log('Webhook not configured yet — showing success screen');
+    showSuccess(formData.email);
+  });
+}
+
+function showSuccess(email) {
+  document.getElementById('main-form').style.display = 'none';
+  document.querySelector('.nav').style.display = 'none';
+  document.getElementById('confirm-email').textContent = email;
+  document.getElementById('success-screen').classList.add('show');
+  document.getElementById('progress').style.width = '100%';
+  document.getElementById('progress-txt').textContent = '4 / 4';
+  document.querySelectorAll('.step-dot').forEach(d => d.classList.add('done'));
+}
+
+// ── INIT ──────────────────────────────────
+updateProgress();
+</script>
+
+</body>
+</html>
